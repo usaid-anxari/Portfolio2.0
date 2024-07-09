@@ -2,6 +2,7 @@ import cookieParser from "cookie-parser";
 import express from "express";
 import messageRouter from './routes/message.route.js'
 import cors from "cors";
+
   
 const app = express();
 app.use(cors({ origin: process.env.ORIGIN, credentials: true }));
