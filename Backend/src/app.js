@@ -1,6 +1,7 @@
 import cookieParser from "cookie-parser";
 import express from "express";
-import messageRouter from './routes/message.route.js'
+import messageRoutes from './routes/message.route.js'
+import userRoutes from './routes/user.route.js'
 import cors from "cors";
 
   
@@ -12,7 +13,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(express.static("public"));
 
-app.use('/api/v1/message',messageRouter) 
+app.use('/api/v1/message',messageRoutes) 
+app.use('/api/v1/users',userRoutes) 
 
 export default app;
 

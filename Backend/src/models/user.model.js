@@ -1,6 +1,7 @@
 import mongoose, { Schema } from "mongoose";
 import bcrypt from "bcrypt";
 import jwt from 'jsonwebtoken'
+import "dotenv/config";
 
 const userSchema = new Schema(
   {
@@ -21,10 +22,9 @@ const userSchema = new Schema(
     password: {
       type: String,
       required: true,
-      select: false,
       minLength: [6, "Password Must be 6 Cheracters!"],
     },
-    profile: {
+    avatar: {
       public_id: {
         type: String,
         required: true,
@@ -79,10 +79,11 @@ const userSchema = new Schema(
 );
 
 userSchema.pre("save", async function (next) {
-  if (!this.password.isModified("password")) {
+  if (!this.isModified("password")) {
     next();
   }
   this.password = await bcrypt.hash(this.password, 12);
+  next()
 });
 
 userSchema.methods.comparePassword = async function(enterdPassword){
