@@ -1,6 +1,6 @@
 import express from "express";
 import {upload} from '../middleware/multer.middleware.js'
-import { getUser, loginUser, logoutUser, registerUser, updateUserAvatar, updateUserInfo, updateUserResume } from "../controllers/user.controller.js";
+import { forgetUserPassword, getUser, getUserPortfolio, loginUser, logoutUser, registerUser, updateUserAvatar, updateUserInfo, updateUserPassword, updateUserResume } from "../controllers/user.controller.js";
 import { authenticated } from "../middleware/auth.js";
 
 
@@ -25,7 +25,9 @@ router.route("/update/resume-user").post(upload.fields([
     {name:'avatar',maxCount:1},
     {name:'resume',maxCount:1},
 ]),authenticated,updateUserResume)
-
+router.route("/update/password-user").post(authenticated,updateUserPassword)
+router.route("/get-protfolio").get(getUserPortfolio)
+router.route("/password/forgot").get(forgetUserPassword)
 
 
 

@@ -5,6 +5,8 @@ import { asyncHandler } from "../utils/AsyncHandler.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { generateToken } from "../utils/generateToken.js";
 import { v2 as cloudinary } from "cloudinary";
+import "dotenv/config";
+import { sendEmail } from "../utils/sendEmail.js";
 
 // ----- Register User ----- //
 export const registerUser = asyncHandler(async (req, res) => {
@@ -152,7 +154,7 @@ export const logoutUser = asyncHandler(async (req, res) => {
 
 // ----- Get User ----- //
 export const getUser = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.user._id);
+  const user = await User.findById(req.user._id).select("-password");
   res.status(200).json(new ApiResponse(200, user, "User Get Successfully!"));
 });
 
@@ -213,9 +215,13 @@ export const updateUserAvatar = asyncHandler(async (req, res) => {
   const avatarId = user.avatar.public_id;
   await cloudinary.uploader.destroy(avatarId);
   const avatar = await uploadOnCloudinary(avatarLocalPath);
-  await User.findByIdAndUpdate(req.user._id,{ $set: { avatar: avatar.url } }, {
-    new: true,
-  }).select("-password");
+  await User.findByIdAndUpdate(
+    req.user._id,
+    { $set: { avatar: avatar.url } },
+    {
+      new: true,
+    }
+  ).select("-password");
 
   res.status(200).json(new ApiResponse(200, avatar.url, "Avatar Updated!"));
 });
@@ -240,4 +246,57 @@ export const updateUserResume = asyncHandler(async (req, res) => {
   ).select("-password");
 
   res.status(200).json(new ApiResponse(200, resume.url, "Avatar Updated!"));
+});
+
+// ----- Update Password ----- //
+export const updateUserPassword = asyncHandler(async (req, res) => {
+  const { currentPassword, newPassword, confirmPassword } = req.body;
+  if (!currentPassword || !newPassword || !confirmPassword) {
+    throw new ApiError(400, "All Fields Are Required!");
+  }
+  const user = await User.findById(req.user._id);
+  const isPasswordMatch = await user.comparePassword(currentPassword);
+  if (!isPasswordMatch) {
+    throw new ApiError(400, "Incorrect Current Password");
+  }
+  if (newPassword !== confirmPassword) {
+    throw new ApiError(400, "New Password And Confirm Password Not Match.");
+  }
+  user.password = newPassword;
+  await user.save();
+  res.status(200).json(new ApiResponse(200, "Password Updated!"));
+});
+
+// ----- Get Protfolio Owner ----- //
+export const getUserPortfolio = asyncHandler(async (req, res) => {
+  const id = "669037b4701e886f4c69c210";
+  const user = await User.findById(id).select("-password");
+  res.status(200).json(new ApiResponse(200, user, true));
+});
+
+// ----- Forget Password ----- //
+export const forgetUserPassword = asyncHandler(async (req, res,next) => {
+  const user = await User.findOne({ email: req.body.email });
+  if (!user) {
+    throw new ApiError("User Not Found", 404);
+  }
+  const resetToken = await user.getResetToken();
+  await user.save({ validateBeforeSave: false });
+  const resetPasswordUrl = `${process.env.DASHBORAD_URL}/password/reset/${resetToken}`;
+  const message = `Your Reset Password Token Is:- \n\n ${resetPasswordUrl}\n\n if you've not request for this please ignore it.`;
+
+  try {
+    await sendEmail({
+      email:user.email,
+      subject : 'Personal Protfolio Dashboard Recovery Password',
+      message
+    })
+    res.status(200).json(new ApiResponse(200,`email sent to ${user.email} Successfully!`))
+  } catch (error) {
+    user.resetPasswordExpire = undefined;
+    user.resetPasswordToken = undefined;
+    await user.save();
+    console.log(`Forget Password Error ${error}`);
+    return next(new ApiError(error.message,500))
+  }
 });
